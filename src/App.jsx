@@ -1,8 +1,13 @@
-import "./style/App.css";
-export default function App() {
+import React from "react";
+import AuthContainer from "./components/AuthContainer";
+import "./App.css";
+
+function App() {
   return (
     <div className="App">
-      <h1>Uinspace</h1>
+      <AuthContainer />
     </div>
   );
 }
+
+export default App;
