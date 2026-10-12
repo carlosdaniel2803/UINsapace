@@ -1,0 +1,30 @@
+.ui-switch-link {
+  display: block;
+  width: 100%;
+  margin-top: 22px;
+  padding: 0;
+  background: none;
+  border: none;
+  text-align: center;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s ease;
+}
+
+.ui-switch-link__action {
+  color: var(--color-accent);
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.ui-switch-link:hover {
+  color: var(--color-text-muted);
+}
+
+.ui-switch-link:hover .ui-switch-link__action {
+  color: var(--color-accent-2);
+  text-decoration: underline;
+}

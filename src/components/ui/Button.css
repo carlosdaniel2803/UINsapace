@@ -1,0 +1,25 @@
+.ui-button {
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.ui-button--primary {
+  margin-top: 8px;
+  background: var(--gradient-accent);
+  color: var(--color-on-accent);
+}
+
+.ui-button--primary:hover {
+  box-shadow: 0 10px 25px rgba(79, 172, 254, 0.35);
+}
+
+.ui-button:active {
+  transform: translateY(0);
+}
