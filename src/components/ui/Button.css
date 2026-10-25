@@ -20,6 +20,29 @@
   box-shadow: 0 10px 25px rgba(79, 172, 254, 0.35);
 }
 
+.ui-button--outline {
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border-input);
+}
+
+.ui-button--outline:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.ui-button--small {
+  width: auto;
+  margin-top: 0;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+}
+
 .ui-button:active {
   transform: translateY(0);
+}
+
+.ui-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

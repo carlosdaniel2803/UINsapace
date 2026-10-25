@@ -1,11 +1,10 @@
 .home {
-  min-height: 100vh;
+  width: 100%;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   gap: 32px;
-  padding: 20px;
 }
 
 .home__section {
@@ -13,13 +12,13 @@
   max-width: 320px;
 }
 
-.home__session {
-  width: 100%;
-  max-width: 320px;
+/* Espacio entre botones dentro de cada tarjeta */
+.home__actions {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
+  gap: 12px;
+}
+
+.home__actions .ui-button--primary {
+  margin-top: 0;
 }

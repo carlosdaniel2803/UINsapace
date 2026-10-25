@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import AppLayout from "../components/layout/AppLayout";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import "./Home.css";
@@ -25,36 +26,30 @@ const SECTIONS = [
 
 export default function Home() {
   const navigate = useNavigate();
-  const { user, can, logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
+  const { can } = useAuth();
 
   return (
-    <div className="home">
-      {SECTIONS.map((section) => {
-        const actions = section.actions.filter((a) => can(a.permission));
-        if (actions.length === 0) return null;
+    <AppLayout>
+      <div className="home">
+        {SECTIONS.map((section) => {
+          const actions = section.actions.filter((a) => can(a.permission));
+          if (actions.length === 0) return null;
 
-        return (
-          <div className="home__section" key={section.title}>
-            <Card title={section.title}>
-              {actions.map((action) => (
-                <Button key={action.to} onClick={() => navigate(action.to)}>
-                  {action.label}
-                </Button>
-              ))}
-            </Card>
-          </div>
-        );
-      })}
-
-      <div className="home__session">
-        <span>{user?.name}</span>
-        <Button onClick={handleLogout}>Cerrar sesión</Button>
+          return (
+            <div className="home__section" key={section.title}>
+              <Card title={section.title}>
+                <div className="home__actions">
+                  {actions.map((action) => (
+                    <Button key={action.to} onClick={() => navigate(action.to)}>
+                      {action.label}
+                    </Button>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          );
+        })}
       </div>
-    </div>
+    </AppLayout>
   );
 }

@@ -19,20 +19,37 @@ router.post("/register", async (req, res, next) => {
     if (!control_number || !name || !email || !password)
       return res.status(400).json({ error: "Faltan campos obligatorios" });
     if (password.length < 8)
-      return res.status(400).json({ error: "La contraseña debe tener al menos 8 caracteres" });
+      return res
+        .status(400)
+        .json({ error: "La contraseña debe tener al menos 8 caracteres" });
 
     const password_hash = await bcrypt.hash(password, 10);
 
-    await query(
+    const result = await query(
       `INSERT INTO users (control_number, name, email, password_hash, role_id)
-       SELECT $1, $2, $3, $4, id FROM roles WHERE code = 'docente'`,
+       SELECT $1, $2, $3, $4, id FROM roles WHERE code = 'docente'
+       RETURNING id`,
       [control_number.trim(), name.trim(), email.trim(), password_hash],
     );
+
+    // Si el rol 'docente' no existe en la base, el INSERT no guarda nada
+    // (y antes se respondía "éxito" igual). Ahora se avisa del problema real.
+    if (result.rowCount === 0) {
+      console.error(
+        "Registro fallido: no existe el rol 'docente' en la tabla roles",
+      );
+      return res.status(500).json({
+        error:
+          "Falta el rol 'docente' en la base de datos. Ejecuta el script SQL completo.",
+      });
+    }
 
     res.status(201).json({ message: "Usuario registrado" });
   } catch (err) {
     if (err.code === "23505")
-      return res.status(409).json({ error: "El correo o número de control ya está registrado" });
+      return res
+        .status(409)
+        .json({ error: "El correo o número de control ya está registrado" });
     next(err);
   }
 });
@@ -49,8 +66,10 @@ router.post("/login", async (req, res, next) => {
       [email.trim()],
     );
 
-    const valid = rows[0] && (await bcrypt.compare(password, rows[0].password_hash));
-    if (!valid) return res.status(401).json({ error: "Correo o contraseña incorrectos" });
+    const valid =
+      rows[0] && (await bcrypt.compare(password, rows[0].password_hash));
+    if (!valid)
+      return res.status(401).json({ error: "Correo o contraseña incorrectos" });
 
     res.json({ token: signToken(rows[0].id) });
   } catch (err) {
