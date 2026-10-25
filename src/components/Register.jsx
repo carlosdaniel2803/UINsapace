@@ -1,38 +1,43 @@
 import React, { useState } from "react";
+import { api } from "../api";
 import Card from "./ui/Card";
 import FormField from "./ui/FormField";
 import Button from "./ui/Button";
+import Alert from "./ui/Alert";
 import SwitchLink from "./ui/SwitchLink";
 
-const ROLES = [
-  { value: "maestro", label: "Maestro" },
-  { value: "administrador", label: "Administrador" },
-  { value: "mantenimiento", label: "Mantenimiento" },
-  { value: "directora", label: "Directora" },
-];
-
-export default function Register({ onSwitchToLogin }) {
+export default function Register({ onSwitchToLogin, onRegistered }) {
   const [formData, setFormData] = useState({
     control_number: "",
     name: "",
     email: "",
     password: "",
-    role: "",
   });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Registrando usuario en la BD:", formData);
-    // Aquí conectarás con tu backend (API)
+    setError("");
+    setLoading(true);
+    try {
+      await api("/auth/register", { method: "POST", body: formData });
+      onRegistered();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Card title="Registro UIN Space">
       <form onSubmit={handleSubmit}>
+        <Alert>{error}</Alert>
         <FormField
           label="Número de Control / ID:"
           name="control_number"
@@ -44,16 +49,6 @@ export default function Register({ onSwitchToLogin }) {
           label="Nombre Completo:"
           name="name"
           value={formData.name}
-          onChange={handleChange}
-          required
-        />
-        <FormField
-          as="select"
-          label="Rol:"
-          name="role"
-          placeholder="Seleccionar Rol"
-          options={ROLES}
-          value={formData.role}
           onChange={handleChange}
           required
         />
@@ -75,7 +70,9 @@ export default function Register({ onSwitchToLogin }) {
           title="La contraseña debe tener al menos 8 caracteres"
           required
         />
-        <Button type="submit">Registrarse</Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? "Registrando..." : "Registrarse"}
+        </Button>
       </form>
       <SwitchLink
         text="¿Ya tienes cuenta?"

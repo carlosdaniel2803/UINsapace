@@ -1,0 +1,19 @@
+.ui-alert {
+  margin-bottom: 18px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  border: 1px solid transparent;
+}
+
+.ui-alert--error {
+  color: #ffb4b4;
+  background: rgba(255, 90, 90, 0.12);
+  border-color: rgba(255, 90, 90, 0.3);
+}
+
+.ui-alert--success {
+  color: #9ff0c4;
+  background: rgba(70, 220, 150, 0.12);
+  border-color: rgba(70, 220, 150, 0.3);
+}

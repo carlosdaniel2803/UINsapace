@@ -12,3 +12,14 @@
   width: 100%;
   max-width: 320px;
 }
+
+.home__session {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}

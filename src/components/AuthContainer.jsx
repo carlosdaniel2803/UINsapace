@@ -6,15 +6,28 @@ import "./AuthContainer.css";
 
 export default function AuthContainer() {
   const [isLoginView, setIsLoginView] = useState(true);
+  const [notice, setNotice] = useState("");
 
   return (
     <div className="auth-page">
       <div className="auth-container">
         <img className="auth-container__logo" src={logo} alt="UIN Space" />
         {isLoginView ? (
-          <Login onSwitchToRegister={() => setIsLoginView(false)} />
+          <Login
+            notice={notice}
+            onSwitchToRegister={() => {
+              setNotice("");
+              setIsLoginView(false);
+            }}
+          />
         ) : (
-          <Register onSwitchToLogin={() => setIsLoginView(true)} />
+          <Register
+            onRegistered={() => {
+              setNotice("Cuenta creada. Ya puedes iniciar sesión.");
+              setIsLoginView(true);
+            }}
+            onSwitchToLogin={() => setIsLoginView(true)}
+          />
         )}
       </div>
     </div>
