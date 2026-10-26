@@ -11,3 +11,8 @@
   justify-content: center;
   padding: 24px;
 }
+
+/* Páginas anchas (listas, calendario): contenido arriba y con ancho máximo */
+.app-layout__main--wide {
+  align-items: flex-start;
+}

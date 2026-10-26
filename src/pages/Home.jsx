@@ -22,6 +22,12 @@ const SECTIONS = [
       { label: "Ver calendario", to: "/reservas", permission: "calendar.view" },
     ],
   },
+  {
+    title: "Administración",
+    actions: [
+      { label: "Gestionar roles", to: "/admin/roles", permission: "roles.manage" },
+    ],
+  },
 ];
 
 export default function Home() {

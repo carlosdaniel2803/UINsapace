@@ -2,6 +2,10 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.js";
+import rolesRoutes from "./routes/roles.js";
+import roomsRoutes from "./routes/rooms.js";
+import reservationsRoutes from "./routes/reservations.js";
+import reportsRoutes from "./routes/reports.js";
 
 const app = express();
 
@@ -21,6 +25,10 @@ app.use(express.json());
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/api/auth", authRoutes);
+app.use("/api/roles", rolesRoutes);
+app.use("/api/rooms", roomsRoutes);
+app.use("/api/reservations", reservationsRoutes);
+app.use("/api/reports", reportsRoutes);
 
 // Manejo de errores general
 app.use((err, _req, res, _next) => {

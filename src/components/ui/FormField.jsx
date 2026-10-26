@@ -42,6 +42,15 @@ export default function FormField({
             </option>
           ))}
         </select>
+      ) : as === "textarea" ? (
+        <textarea
+          id={id}
+          name={name}
+          placeholder={placeholder}
+          rows={4}
+          className="ui-field__control ui-field__control--textarea"
+          {...rest}
+        />
       ) : (
         <input
           id={id}

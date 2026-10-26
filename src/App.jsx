@@ -3,7 +3,11 @@ import { Routes, Route } from "react-router-dom";
 import AuthContainer from "./components/AuthContainer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
-import PagePlaceholder from "./pages/PagePlaceholder";
+import Reports from "./pages/Reports";
+import NewReport from "./pages/NewReport";
+import Reservations from "./pages/Reservations";
+import NewReservation from "./pages/NewReservation";
+import Roles from "./pages/admin/Roles";
 
 function App() {
   return (
@@ -21,7 +25,7 @@ function App() {
         path="/reportes"
         element={
           <ProtectedRoute permission="reports.view_history">
-            <PagePlaceholder title="Reportes" />
+            <Reports />
           </ProtectedRoute>
         }
       />
@@ -29,7 +33,7 @@ function App() {
         path="/reportes/nuevo"
         element={
           <ProtectedRoute permission="reports.create">
-            <PagePlaceholder title="Nuevo reporte" />
+            <NewReport />
           </ProtectedRoute>
         }
       />
@@ -37,7 +41,7 @@ function App() {
         path="/reservas"
         element={
           <ProtectedRoute permission="calendar.view">
-            <PagePlaceholder title="Calendario de reservas" />
+            <Reservations />
           </ProtectedRoute>
         }
       />
@@ -45,7 +49,15 @@ function App() {
         path="/reservas/nueva"
         element={
           <ProtectedRoute permission="reservations.create">
-            <PagePlaceholder title="Nueva reserva" />
+            <NewReservation />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/roles"
+        element={
+          <ProtectedRoute permission="roles.manage">
+            <Roles />
           </ProtectedRoute>
         }
       />

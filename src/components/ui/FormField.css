@@ -50,3 +50,8 @@
   background: #1e1e2e;
   color: var(--color-text);
 }
+
+.ui-field__control--textarea {
+  resize: vertical;
+  min-height: 90px;
+}
