@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { query } from "../db.js";
 import { requireAuth, requirePermission } from "../middleware/auth.js";
+import { asString } from "../utils/validate.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -11,11 +12,12 @@ const PRIORITIES = ["baja", "media", "alta", "urgente"];
 // POST /api/reports  { room_id, description, priority }
 router.post("/", requirePermission("reports.create"), async (req, res, next) => {
   try {
-    const { room_id, description = "", priority = "media" } = req.body;
+    const { room_id, priority = "media" } = req.body;
+    const description = asString(req.body.description).trim();
 
     if (!/^\d+$/.test(String(room_id ?? "")))
       return res.status(400).json({ error: "Selecciona un salón" });
-    if (description.trim().length < 5)
+    if (description.length < 5)
       return res.status(400).json({ error: "Describe la anomalía (mínimo 5 caracteres)" });
     if (!PRIORITIES.includes(priority))
       return res.status(400).json({ error: "Prioridad inválida" });
@@ -24,7 +26,7 @@ router.post("/", requirePermission("reports.create"), async (req, res, next) => 
       `INSERT INTO reports (room_id, user_id, description, priority)
        SELECT id, $2, $3, $4 FROM rooms WHERE id = $1 AND active
        RETURNING id`,
-      [room_id, req.user.id, description.trim(), priority],
+      [room_id, req.user.id, description, priority],
     );
     if (result.rowCount === 0)
       return res.status(404).json({ error: "El salón no existe o no está disponible" });
@@ -78,7 +80,7 @@ router.patch("/:id/status", async (req, res, next) => {
       `UPDATE reports
        SET status = $2, resolution_notes = COALESCE($3, resolution_notes)
        WHERE id = $1`,
-      [req.params.id, status, resolution_notes?.trim() || null],
+      [req.params.id, status, asString(resolution_notes).trim() || null],
     );
     if (result.rowCount === 0) return res.status(404).json({ error: "Reporte no encontrado" });
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api";
 import { useApi } from "../../hooks/useApi";
@@ -19,18 +19,30 @@ const GROUPS = {
   data: "Información y estadísticas",
 };
 
+// El rol con acceso total: ni se renombra ni se cambian sus permisos.
+const ADMIN_CODE = "administrador";
+
+const EMPTY_FORM = { name: "", description: "" };
+
 export default function Roles() {
   const navigate = useNavigate();
   const roles = useApi("/roles");
   const perms = useApi("/roles/permissions");
 
-  const [form, setForm] = useState({ name: "", description: "" });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [selected, setSelected] = useState([]);
+  const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Agrupa el catálogo por prefijo: "reports.create" -> grupo "reports"
+  const [newPerm, setNewPerm] = useState(EMPTY_FORM);
+  const [permEdit, setPermEdit] = useState(null);
+  const [permForm, setPermForm] = useState(EMPTY_FORM);
+  const [permError, setPermError] = useState("");
+  const [permSuccess, setPermSuccess] = useState("");
+
+  // Groups the catalog by prefix: "reports.create" -> "reports" group
   const grouped = {};
   (perms.data?.permissions ?? []).forEach((p) => {
     const g = p.code.split(".")[0];
@@ -40,16 +52,45 @@ export default function Roles() {
   const togglePerm = (code) =>
     setSelected((cur) => (cur.includes(code) ? cur.filter((c) => c !== code) : [...cur, code]));
 
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setSelected([]);
+    setEditing(null);
+  };
+
+  const startEdit = (role) => {
+    setEditing(role);
+    setForm({ name: role.name, description: role.description || "" });
+    setSelected(role.permissions ?? []);
+    setError("");
+    setSuccess("");
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
     setSaving(true);
     try {
-      await api("/roles", { method: "POST", body: { ...form, permissions: selected } });
-      setSuccess(`Rol "${form.name.trim()}" creado`);
-      setForm({ name: "", description: "" });
-      setSelected([]);
+      if (editing) {
+        // System roles keep their name and description; only their permissions change.
+        if (!editing.is_system) {
+          await api(`/roles/${editing.id}`, {
+            method: "PUT",
+            body: { name: form.name, description: form.description },
+          });
+        }
+        await api(`/roles/${editing.id}/permissions`, {
+          method: "PUT",
+          body: { permissions: selected },
+        });
+        setSuccess(`Rol "${editing.name}" actualizado`);
+        resetForm();
+      } else {
+        await api("/roles", { method: "POST", body: { ...form, permissions: selected } });
+        setSuccess(`Rol "${form.name.trim()}" creado`);
+        resetForm();
+      }
       roles.reload();
     } catch (err) {
       setError(err.message);
@@ -65,14 +106,66 @@ export default function Roles() {
     try {
       await api(`/roles/${role.id}`, { method: "DELETE" });
       setSuccess(`Rol "${role.name}" eliminado`);
+      if (editing?.id === role.id) resetForm();
       roles.reload();
     } catch (err) {
       setError(err.message);
     }
   };
 
+  const handleCreatePerm = async (e) => {
+    e.preventDefault();
+    setPermError("");
+    setPermSuccess("");
+    try {
+      await api("/roles/permissions", { method: "POST", body: newPerm });
+      setPermSuccess(`Permiso "${newPerm.code.trim()}" creado`);
+      setNewPerm(EMPTY_FORM);
+      perms.reload();
+    } catch (err) {
+      setPermError(err.message);
+    }
+  };
+
+  const startPermEdit = (permission) => {
+    setPermEdit(permission);
+    setPermForm({ code: permission.code, description: permission.description || "" });
+    setPermError("");
+    setPermSuccess("");
+  };
+
+  const savePerm = async (e) => {
+    e.preventDefault();
+    setPermError("");
+    setPermSuccess("");
+    try {
+      await api(`/roles/permissions/${permEdit.id}`, { method: "PATCH", body: permForm });
+      setPermSuccess(`Permiso "${permEdit.code}" actualizado`);
+      setPermEdit(null);
+      setPermForm(EMPTY_FORM);
+      perms.reload();
+    } catch (err) {
+      setPermError(err.message);
+    }
+  };
+
+  const deletePerm = async (permission) => {
+    if (!window.confirm(`¿Eliminar el permiso "${permission.code}"?`)) return;
+    setPermError("");
+    setPermSuccess("");
+    try {
+      await api(`/roles/permissions/${permission.id}`, { method: "DELETE" });
+      setPermSuccess(`Permiso "${permission.code}" eliminado`);
+      perms.reload();
+    } catch (err) {
+      setPermError(err.message);
+    }
+  };
+
   const describe = (code) =>
     (perms.data?.permissions ?? []).find((p) => p.code === code)?.description || code;
+
+  const locked = editing?.is_system;
 
   return (
     <AppLayout wide>
@@ -92,16 +185,17 @@ export default function Roles() {
             {(roles.data?.roles ?? []).map((r) => {
               const blocked = r.is_system || r.user_count > 0;
               const why = r.is_system
-                ? "Rol predeterminado: no se puede eliminar"
+                ? "Rol del sistema: no se puede eliminar"
                 : r.user_count > 0
                   ? "Tiene usuarios asignados"
                   : "Eliminar rol";
+              const isAdmin = r.code === ADMIN_CODE;
               return (
                 <div key={r.id} className="list__item">
                   <div className="list__main">
                     <div className="list__title">
                       {r.name}
-                      {r.is_system && <span className="badge">Predeterminado</span>}
+                      {r.is_system && <span className="badge">Del sistema</span>}
                     </div>
                     <div className="list__meta">
                       {r.description || "Sin descripción"} · {r.user_count} usuario(s) ·{" "}
@@ -119,29 +213,53 @@ export default function Roles() {
                       </div>
                     </details>
                   </div>
-                  <button
-                    type="button"
-                    className="danger-btn"
-                    disabled={blocked}
-                    title={why}
-                    onClick={() => handleDelete(r)}
-                  >
-                    Eliminar
-                  </button>
+                  <div className="list__actions">
+                    <Button
+                      size="small"
+                      variant="outline"
+                      disabled={isAdmin}
+                      title={
+                        isAdmin
+                          ? "El rol Administrador no se puede modificar"
+                          : r.is_system
+                            ? "Solo se pueden editar sus permisos"
+                            : "Editar rol"
+                      }
+                      onClick={() => startEdit(r)}
+                    >
+                      Editar
+                    </Button>
+                    <button
+                      type="button"
+                      className="danger-btn"
+                      disabled={blocked}
+                      title={why}
+                      onClick={() => handleDelete(r)}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
         </Card>
 
-        <Card title="Crear rol">
+        <Card title={editing ? `Editar rol: ${editing.name}` : "Crear rol"}>
           <form onSubmit={handleCreate}>
+            {locked && (
+              <Alert>
+                Este rol es del sistema: su nombre y descripción no se pueden cambiar, solo sus
+                permisos.
+              </Alert>
+            )}
             <FormField
               label="Nombre del rol"
               name="name"
               maxLength={60}
               placeholder="Ej. Coordinación"
               value={form.name}
+              disabled={locked}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
             />
@@ -151,6 +269,7 @@ export default function Roles() {
               maxLength={255}
               placeholder="¿Qué puede hacer este rol?"
               value={form.description}
+              disabled={locked}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
 
@@ -174,9 +293,113 @@ export default function Roles() {
               </div>
             ))}
 
-            <Button type="submit" disabled={saving}>
-              {saving ? "Creando…" : "Crear rol"}
-            </Button>
+            <div className="list__actions">
+              <Button type="submit" disabled={saving}>
+                {saving ? "Guardando…" : editing ? "Guardar cambios" : "Crear rol"}
+              </Button>
+              {editing && (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  Cancelar
+                </Button>
+              )}
+            </div>
+          </form>
+        </Card>
+
+        <Card title="Catálogo de permisos">
+          <Alert>{permError}</Alert>
+          <Alert type="success">{permSuccess}</Alert>
+
+          <div className="list">
+            {(perms.data?.permissions ?? []).map((p) => (
+              <div key={p.id} className="list__item">
+                <div className="list__main">
+                  <div className="list__title">
+                    {p.code}
+                    {p.is_system && <span className="badge">Base</span>}
+                  </div>
+                  <div className="list__meta">{p.description || "Sin descripción"}</div>
+                </div>
+                <div className="list__actions">
+                  <Button size="small" variant="outline" onClick={() => startPermEdit(p)}>
+                    Editar
+                  </Button>
+                  <button
+                    type="button"
+                    className="danger-btn"
+                    disabled={p.is_system}
+                    title={
+                      p.is_system
+                        ? "Los permisos base no se pueden eliminar"
+                        : "Eliminar permiso"
+                    }
+                    onClick={() => deletePerm(p)}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {permEdit && (
+            <form onSubmit={savePerm} style={{ marginTop: "18px" }}>
+              <p className="list__meta" style={{ margin: "0 0 10px" }}>
+                Editando permiso: {permEdit.code}
+              </p>
+              <FormField
+                label="Clave"
+                name="perm_code"
+                maxLength={50}
+                placeholder="recurso.accion"
+                value={permForm.code}
+                disabled={permEdit.is_system}
+                onChange={(e) => setPermForm({ ...permForm, code: e.target.value })}
+                required
+              />
+              <FormField
+                label="Descripción"
+                name="perm_description"
+                maxLength={255}
+                value={permForm.description}
+                onChange={(e) => setPermForm({ ...permForm, description: e.target.value })}
+              />
+              <div className="list__actions">
+                <Button type="submit">Guardar permiso</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setPermEdit(null);
+                    setPermForm(EMPTY_FORM);
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          )}
+
+          <form onSubmit={handleCreatePerm} style={{ marginTop: "18px" }}>
+            <p className="list__meta" style={{ margin: "0 0 10px" }}>Nuevo permiso</p>
+            <FormField
+              label="Clave"
+              name="new_perm_code"
+              maxLength={50}
+              placeholder="recurso.accion"
+              value={newPerm.code}
+              onChange={(e) => setNewPerm({ ...newPerm, code: e.target.value })}
+              required
+            />
+            <FormField
+              label="Descripción"
+              name="new_perm_description"
+              maxLength={255}
+              placeholder="¿Qué permite este permiso?"
+              value={newPerm.description}
+              onChange={(e) => setNewPerm({ ...newPerm, description: e.target.value })}
+            />
+            <Button type="submit">Crear permiso</Button>
           </form>
         </Card>
       </div>

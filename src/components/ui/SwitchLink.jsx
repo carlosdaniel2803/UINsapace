@@ -1,4 +1,3 @@
-import React from "react";
 import "./SwitchLink.css";
 
 export default function SwitchLink({ text, action, onClick }) {

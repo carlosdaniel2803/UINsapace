@@ -1,4 +1,3 @@
-import React from "react";
 import "./Alert.css";
 
 export default function Alert({ type = "error", children }) {

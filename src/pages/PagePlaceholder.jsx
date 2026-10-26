@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import Card from "../components/ui/Card";

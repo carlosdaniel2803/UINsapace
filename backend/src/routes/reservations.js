@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { query } from "../db.js";
 import { requireAuth, requirePermission } from "../middleware/auth.js";
+import { asString } from "../utils/validate.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -61,11 +62,15 @@ router.get("/", requirePermission("calendar.view"), async (req, res, next) => {
 // POST /api/reservations  { room_id, date, start_time, end_time, purpose }
 router.post("/", requirePermission("reservations.create"), async (req, res, next) => {
   try {
-    const { room_id, date, start_time, end_time, purpose = "" } = req.body;
+    const { room_id, purpose } = req.body;
+    const date = asString(req.body.date);
+    const start_time = asString(req.body.start_time);
+    const end_time = asString(req.body.end_time);
+    const cleanPurpose = asString(purpose).trim().slice(0, 255);
 
     if (!/^\d+$/.test(String(room_id ?? "")))
       return res.status(400).json({ error: "Selecciona un salón" });
-    if (!DATE_RE.test(date || "") || !TIME_RE.test(start_time || "") || !TIME_RE.test(end_time || ""))
+    if (!DATE_RE.test(date) || !TIME_RE.test(start_time) || !TIME_RE.test(end_time))
       return res.status(400).json({ error: "Fecha u horario inválido" });
     if (end_time <= start_time)
       return res.status(400).json({ error: "La hora de fin debe ser posterior a la de inicio" });
@@ -81,7 +86,7 @@ router.post("/", requirePermission("reservations.create"), async (req, res, next
       `INSERT INTO reservations (user_id, room_id, date, start_time, end_time, purpose)
        SELECT $1, id, $3, $4, $5, $6 FROM rooms WHERE id = $2 AND active
        RETURNING id`,
-      [req.user.id, room_id, date, start_time, end_time, purpose.trim().slice(0, 255) || null],
+      [req.user.id, room_id, date, start_time, end_time, cleanPurpose || null],
     );
     if (result.rowCount === 0)
       return res.status(404).json({ error: "El salón no existe o no está disponible" });
@@ -121,7 +126,7 @@ router.post("/:id/cancel", async (req, res, next) => {
       `UPDATE reservations
        SET status = 'cancelada', cancelled_by = $2, cancelled_at = now(), cancel_reason = $3
        WHERE id = $1`,
-      [req.params.id, req.user.id, (req.body.reason || "").trim().slice(0, 255) || null],
+      [req.params.id, req.user.id, asString(req.body.reason).trim().slice(0, 255) || null],
     );
     res.json({ message: "Reservación cancelada" });
   } catch (err) {

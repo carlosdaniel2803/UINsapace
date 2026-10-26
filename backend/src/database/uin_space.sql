@@ -1,12 +1,12 @@
 -- =====================================================================
--- UIN Space — esquema PostgreSQL
--- Basado en el dump de MariaDB + roles/permisos del diagrama de actividades
+-- UIN Space — PostgreSQL schema
+-- Based on the MariaDB dump + roles/permissions from the activity diagram
 -- =====================================================================
 
-CREATE EXTENSION IF NOT EXISTS btree_gist;  -- evita traslapes de reservas
+CREATE EXTENSION IF NOT EXISTS btree_gist;  -- prevents overlapping reservations
 
 -- ---------------------------------------------------------------------
--- Tipos enumerados
+-- Enum types
 -- ---------------------------------------------------------------------
 CREATE TYPE room_type          AS ENUM ('aula','computo','laboratorio','biblioteca','auditorio','oficina','sala','otro');
 CREATE TYPE equipment_status   AS ENUM ('disponible','en_mantenimiento','fuera_de_servicio');
@@ -15,7 +15,7 @@ CREATE TYPE report_status      AS ENUM ('pendiente','en_proceso','resuelto');
 CREATE TYPE report_priority    AS ENUM ('baja','media','alta','urgente');
 
 -- ---------------------------------------------------------------------
--- Trigger genérico para updated_at
+-- Generic trigger for updated_at
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
 BEGIN
@@ -25,18 +25,22 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ---------------------------------------------------------------------
--- ROLES Y PERMISOS
+-- ROLES AND PERMISSIONS
 -- ---------------------------------------------------------------------
 CREATE TABLE roles (
   id          smallint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   code        varchar(30)  NOT NULL UNIQUE CHECK (code ~ '^[a-z][a-z0-9_]*$'),
   name        varchar(60)  NOT NULL,
   description varchar(255),
-  is_system   boolean      NOT NULL DEFAULT false,  -- true = rol predeterminado, no se puede borrar
-  created_at  timestamptz  NOT NULL DEFAULT now()
+  is_system   boolean      NOT NULL DEFAULT false,  -- true = system role, cannot be deleted or renamed
+  created_at  timestamptz  NOT NULL DEFAULT now(),
+  updated_at  timestamptz  NOT NULL DEFAULT now()
 );
+CREATE UNIQUE INDEX roles_name_lower_uq ON roles (lower(name));
+CREATE TRIGGER trg_roles_updated BEFORE UPDATE ON roles
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Los roles predeterminados no se pueden borrar ni cambiar de código
+-- System roles cannot be deleted, renamed or have their code changed
 CREATE OR REPLACE FUNCTION protect_system_roles() RETURNS trigger AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
@@ -45,8 +49,8 @@ BEGIN
     END IF;
     RETURN OLD;
   END IF;
-  IF OLD.is_system AND (NEW.code <> OLD.code OR NEW.is_system = false) THEN
-    RAISE EXCEPTION 'El rol "%" es predeterminado y no se puede modificar su código', OLD.name;
+  IF OLD.is_system AND (NEW.code <> OLD.code OR NEW.name <> OLD.name OR NEW.is_system = false) THEN
+    RAISE EXCEPTION 'El rol "%" es del sistema y no se puede renombrar ni cambiar su código', OLD.name;
   END IF;
   RETURN NEW;
 END;
@@ -57,9 +61,29 @@ CREATE TRIGGER trg_roles_protect BEFORE UPDATE OR DELETE ON roles
 
 CREATE TABLE permissions (
   id          smallint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  code        varchar(50)  NOT NULL UNIQUE,   -- ej. 'reservations.create'
-  description varchar(255)
+  code        varchar(50)  NOT NULL UNIQUE,   -- e.g. 'reservations.create'
+  description varchar(255),
+  is_system   boolean      NOT NULL DEFAULT false  -- true = base permission, only its description can be edited
 );
+
+-- Base permissions cannot be deleted or renamed: the system looks them up by key
+CREATE OR REPLACE FUNCTION protect_system_permissions() RETURNS trigger AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.is_system THEN
+      RAISE EXCEPTION 'El permiso "%" es base y no se puede eliminar', OLD.code;
+    END IF;
+    RETURN OLD;
+  END IF;
+  IF OLD.is_system AND NEW.code <> OLD.code THEN
+    RAISE EXCEPTION 'El permiso base "%" no se puede renombrar', OLD.code;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_permissions_protect_system BEFORE UPDATE OR DELETE ON permissions
+  FOR EACH ROW EXECUTE FUNCTION protect_system_permissions();
 
 CREATE TABLE role_permissions (
   role_id       smallint NOT NULL REFERENCES roles(id)       ON DELETE CASCADE,
@@ -68,7 +92,7 @@ CREATE TABLE role_permissions (
 );
 
 -- ---------------------------------------------------------------------
--- USUARIOS
+-- USERS
 -- ---------------------------------------------------------------------
 CREATE TABLE users (
   id             bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -89,7 +113,7 @@ CREATE TRIGGER trg_users_updated BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ---------------------------------------------------------------------
--- ESPACIOS Y EQUIPO
+-- SPACES AND EQUIPMENT
 -- ---------------------------------------------------------------------
 CREATE TABLE rooms (
   id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -120,7 +144,7 @@ CREATE TABLE room_equipment (
 CREATE INDEX idx_room_equipment_room ON room_equipment (room_id);
 
 -- ---------------------------------------------------------------------
--- RESERVAS
+-- RESERVATIONS
 -- ---------------------------------------------------------------------
 CREATE TABLE reservations (
   id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -131,14 +155,14 @@ CREATE TABLE reservations (
   end_time      time               NOT NULL,
   status        reservation_status NOT NULL DEFAULT 'confirmada',
   purpose       varchar(255),
-  -- cancelación (flujo de Prefectura)
+  -- cancellation (Prefectura flow)
   cancelled_by  bigint REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
   cancelled_at  timestamptz,
   cancel_reason varchar(255),
   created_at    timestamptz        NOT NULL DEFAULT now(),
   updated_at    timestamptz        NOT NULL DEFAULT now(),
   CHECK (end_time > start_time),
-  -- Una sala no puede tener dos reservas confirmadas que se traslapen
+  -- A room cannot have two confirmed reservations that overlap
   CONSTRAINT reservations_no_overlap EXCLUDE USING gist (
     room_id WITH =,
     tsrange(date + start_time, date + end_time) WITH &&
@@ -150,7 +174,7 @@ CREATE TRIGGER trg_reservations_updated BEFORE UPDATE ON reservations
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ---------------------------------------------------------------------
--- REPORTES / ANOMALÍAS
+-- REPORTS / ANOMALIES
 -- ---------------------------------------------------------------------
 CREATE TABLE reports (
   id               bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -174,10 +198,10 @@ CREATE TRIGGER trg_reports_updated BEFORE UPDATE ON reports
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- =====================================================================
--- DATOS INICIALES
+-- SEED DATA
 -- =====================================================================
 
--- Todo permiso nuevo se le asigna automáticamente al administrador
+-- Every new permission is granted to the administrator automatically
 CREATE OR REPLACE FUNCTION grant_permission_to_admin() RETURNS trigger AS $$
 BEGIN
   INSERT INTO role_permissions (role_id, permission_id)
@@ -190,10 +214,13 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_permissions_grant_admin AFTER INSERT ON permissions
   FOR EACH ROW EXECUTE FUNCTION grant_permission_to_admin();
 
--- Al administrador no se le pueden quitar permisos (evita que se bloquee solo)
+-- Permissions cannot be removed from the administrator (prevents locking itself out)
 CREATE OR REPLACE FUNCTION protect_admin_permissions() RETURNS trigger AS $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM roles WHERE id = OLD.role_id AND code = 'administrador') THEN
+  -- pg_trigger_depth() is 1 on a direct delete and 2 when the delete comes from
+  -- the ON DELETE CASCADE of the permission itself, which must stay possible.
+  IF pg_trigger_depth() = 1
+     AND EXISTS (SELECT 1 FROM roles WHERE id = OLD.role_id AND code = 'administrador') THEN
     RAISE EXCEPTION 'No se pueden quitar permisos al rol Administrador';
   END IF;
   RETURN OLD;
@@ -217,12 +244,13 @@ INSERT INTO equipment_types (name, description) VALUES
   ('Mesas',              'Mesas para estudiantes o trabajo'),
   ('Sillas',             'Sillas disponibles en el espacio');
 
+-- Only two roles belong to the system (immutable): administrador and mantenimiento
 INSERT INTO roles (code, name, description, is_system) VALUES
-  ('docente',       'Docentes',      'Aparta salones, ve el calendario y genera reportes',              true),
+  ('docente',       'Docentes',      'Aparta salones, ve el calendario y genera reportes',              false),
   ('administrador', 'Administrador', 'Acceso total: usuarios, roles, salones, reservas y reportes',     true),
-  ('directora',     'Directora',     'Consulta el historial de todo y genera reportes de anomalías',    true),
+  ('directora',     'Directora',     'Consulta el historial de todo y genera reportes de anomalías',    false),
   ('mantenimiento', 'Mantenimiento', 'Aparta salones y atiende reportes (historial y cambio de estado)', true),
-  ('prefectura',    'Prefectura',    'Aparta salones y cancela reservas de cualquier usuario',          true);
+  ('prefectura',    'Prefectura',    'Aparta salones y cancela reservas de cualquier usuario',          false);
 
 INSERT INTO permissions (code, description) VALUES
   ('users.view',              'Ver usuarios'),
@@ -241,16 +269,19 @@ INSERT INTO permissions (code, description) VALUES
   ('reports.manage',          'Editar, asignar y eliminar cualquier reporte'),
   ('data.view',               'Consultar información y estadísticas');
 
--- Docentes: reservar, calendario y generar reportes (sin ver historial)
+-- The initial catalog is base: it cannot be deleted or renamed, only its description edited
+UPDATE permissions SET is_system = true;
+
+-- Docentes: reserve, calendar and create reports (no history)
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r JOIN permissions p ON p.code IN (
   'rooms.view','calendar.view','reservations.create','reports.create'
 ) WHERE r.code = 'docente';
 
--- Administrador: todos los permisos
+-- Administrator: all permissions
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p WHERE r.code = 'administrador'
-ON CONFLICT DO NOTHING;  -- el trigger ya se los asigna al insertar cada permiso
+ON CONFLICT DO NOTHING;  -- the trigger already grants them on every permission insert
 
 -- Directora: consulta el historial de todo y genera reportes; no reserva
 INSERT INTO role_permissions (role_id, permission_id)
