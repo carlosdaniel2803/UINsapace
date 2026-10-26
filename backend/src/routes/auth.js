@@ -3,8 +3,15 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { query } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { loginLimiter, registerLimiter } from "../middleware/rateLimit.js";
+import { asString } from "../utils/validate.js";
 
 const router = Router();
+
+// Hash of a placeholder password, used to keep the login response time
+// constant when the email is not registered.
+const DUMMY_PASSWORD_HASH =
+  "$2a$10$99mDmsO9at2MOmg33ssB0O0ZaBCmqidbVjYN8zGhIGlAvvMePJeai";
 
 const signToken = (userId) =>
   jwt.sign({ sub: userId }, process.env.JWT_SECRET, { expiresIn: "8h" });
@@ -12,24 +19,42 @@ const signToken = (userId) =>
 // POST /api/auth/register
 // El registro público SIEMPRE crea usuarios "docente".
 // Los demás roles los asigna el administrador.
-router.post("/register", async (req, res, next) => {
+router.post("/register", registerLimiter, async (req, res, next) => {
   try {
     const { control_number, name, email, password } = req.body;
+    const controlNumber = asString(control_number).trim();
+    const fullName = asString(name).trim();
+    const mail = asString(email).trim();
+    const pass = asString(password);
 
-    if (!control_number || !name || !email || !password)
+    if (!controlNumber || !fullName || !mail || !pass)
       return res.status(400).json({ error: "Faltan campos obligatorios" });
-    if (password.length < 8)
+    if (pass.length < 8)
       return res
         .status(400)
         .json({ error: "La contraseña debe tener al menos 8 caracteres" });
+    if (pass.length > 72)
+      return res
+        .status(400)
+        .json({ error: "La contraseña no puede superar los 72 caracteres" });
+    if (controlNumber.length > 20)
+      return res
+        .status(400)
+        .json({ error: "El número de control es demasiado largo (máx. 20 caracteres)" });
+    if (fullName.length > 150)
+      return res
+        .status(400)
+        .json({ error: "El nombre es demasiado largo (máx. 150 caracteres)" });
+    if (mail.length > 150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail))
+      return res.status(400).json({ error: "El correo electrónico no es válido" });
 
-    const password_hash = await bcrypt.hash(password, 10);
+    const password_hash = await bcrypt.hash(pass, 10);
 
     const result = await query(
       `INSERT INTO users (control_number, name, email, password_hash, role_id)
        SELECT $1, $2, $3, $4, id FROM roles WHERE code = 'docente'
        RETURNING id`,
-      [control_number.trim(), name.trim(), email.trim(), password_hash],
+      [controlNumber, fullName, mail, password_hash],
     );
 
     // Si el rol 'docente' no existe en la base, el INSERT no guarda nada
@@ -55,20 +80,26 @@ router.post("/register", async (req, res, next) => {
 });
 
 // POST /api/auth/login
-router.post("/login", async (req, res, next) => {
+router.post("/login", loginLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
+    const mail = asString(email).trim();
+    const pass = asString(password);
+    if (!mail || !pass)
       return res.status(400).json({ error: "Correo y contraseña requeridos" });
 
     const { rows } = await query(
       "SELECT id, password_hash FROM users WHERE lower(email) = lower($1) AND active",
-      [email.trim()],
+      [mail],
     );
 
-    const valid =
-      rows[0] && (await bcrypt.compare(password, rows[0].password_hash));
-    if (!valid)
+    // Always compare, even when the user does not exist, so the response time
+    // does not reveal which emails are registered.
+    const valid = await bcrypt.compare(
+      pass,
+      rows[0]?.password_hash ?? DUMMY_PASSWORD_HASH,
+    );
+    if (!rows[0] || !valid)
       return res.status(401).json({ error: "Correo o contraseña incorrectos" });
 
     res.json({ token: signToken(rows[0].id) });

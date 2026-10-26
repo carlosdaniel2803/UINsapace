@@ -1,22 +1,37 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { api } from "../api";
+import { createContext, useContext, useEffect, useState } from "react";
+import { api, AUTH_UNAUTHORIZED_EVENT } from "../api";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() =>
+    Boolean(localStorage.getItem("token")),
+  );
 
   // Al abrir la app, si hay token guardado, recupera al usuario
   useEffect(() => {
-    if (!localStorage.getItem("token")) {
-      setLoading(false);
-      return;
-    }
+    if (!localStorage.getItem("token")) return;
+
+    let cancelled = false;
     api("/auth/me")
-      .then((data) => setUser(data.user))
+      .then((data) => !cancelled && setUser(data.user))
       .catch(() => localStorage.removeItem("token"))
-      .finally(() => setLoading(false));
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // El backend respondió 401: la sesión venció o el token fue revocado.
+  useEffect(() => {
+    const onUnauthorized = () => {
+      localStorage.removeItem("token");
+      setUser(null);
+    };
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, onUnauthorized);
+    return () =>
+      window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, onUnauthorized);
   }, []);
 
   const login = async (email, password) => {

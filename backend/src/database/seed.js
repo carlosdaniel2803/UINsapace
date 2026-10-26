@@ -38,13 +38,21 @@ try {
       console.log(`El usuario ${email} ya existía: ahora es administrador`);
     } else {
       const hash = await bcrypt.hash(password, 10);
-      await pool.query(
+      const created = await pool.query(
         `INSERT INTO users (control_number, name, email, password_hash, role_id)
          SELECT 'ADMIN-' || substr(md5(random()::text), 1, 8), $1, $2, $3, id
-         FROM roles WHERE code = 'administrador'`,
+         FROM roles WHERE code = 'administrador'
+         RETURNING id`,
         [name, email, hash],
       );
-      console.log(`Administrador creado: ${email}`);
+      if (created.rowCount === 0) {
+        console.error(
+          "No se creó el administrador: falta el rol 'administrador' en la tabla roles",
+        );
+        process.exitCode = 1;
+      } else {
+        console.log(`Administrador creado: ${email}`);
+      }
     }
   }
 } catch (err) {
