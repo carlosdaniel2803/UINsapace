@@ -1,4 +1,3 @@
-import React from "react";
 import "./Button.css";
 
 // variant: "primary" | "outline"     size: "default" | "small"
