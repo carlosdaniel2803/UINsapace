@@ -17,6 +17,7 @@ export default function Header() {
     <header className="app-header">
       <Link to="/inicio" className="app-header__logo-link">
         <img className="app-header__logo" src={logo} alt="UIN Space" />
+        <h5 className="app-header__by">By Carlos Daniel Garcia Martinez</h5>
       </Link>
 
       <div className="app-header__user">

@@ -19,6 +19,11 @@
   height: 40px;
   width: auto;
 }
+.app-header__by {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-left: 8px;
+}
 
 .app-header__user {
   display: flex;
