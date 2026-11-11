@@ -19,7 +19,9 @@ export default function Header() {
         <img className="app-header__logo" src={logo} alt="UIN Space" />
       </Link>
 
-      <h5 className="app-header__by">Carlos Daniel Garcia Martinez</h5>
+      <h5 className="app-header__by">
+        Ingeniería y Desarrollo de Software - Carlos Daniel Garcia Martinez
+      </h5>
 
       <div className="app-header__user">
         <span className="app-header__name">{user?.name}</span>
