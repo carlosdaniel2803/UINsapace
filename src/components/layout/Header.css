@@ -22,7 +22,8 @@
 .app-header__by {
   font-size: 0.8rem;
   color: var(--color-text-muted);
-  margin-left: 8px;
+  cursor: none;
+  text-align: center;
 }
 
 .app-header__user {
