@@ -17,7 +17,7 @@
 }
 
 .ui-button--primary:hover {
-  box-shadow: 0 10px 25px rgba(79, 172, 254, 0.35);
+  background: rgba(79, 172, 254, 0.35);
 }
 
 .ui-button--outline {
