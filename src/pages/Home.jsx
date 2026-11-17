@@ -8,23 +8,41 @@ import "./Home.css";
 // Cada acción solo se muestra si el usuario tiene el permiso
 const SECTIONS = [
   {
-    title: "Reporte",
-    actions: [
-      { label: "Crear reporte", to: "/reportes/nuevo", permission: "reports.create" },
-      { label: "Ver reportes", to: "/reportes", permission: "reports.view_history" },
-    ],
-  },
-  {
     title: "Reserva",
     actions: [
-      { label: "Hacer reserva", to: "/reservas/nueva", permission: "reservations.create" },
+      {
+        label: "Hacer reserva",
+        to: "/reservas/nueva",
+        permission: "reservations.create",
+      },
       { label: "Ver calendario", to: "/reservas", permission: "calendar.view" },
     ],
   },
+
+  {
+    title: "Reporte",
+    actions: [
+      {
+        label: "Crear reporte",
+        to: "/reportes/nuevo",
+        permission: "reports.create",
+      },
+      {
+        label: "Ver reportes",
+        to: "/reportes",
+        permission: "reports.view_history",
+      },
+    ],
+  },
+
   {
     title: "Administración",
     actions: [
-      { label: "Gestionar roles", to: "/admin/roles", permission: "roles.manage" },
+      {
+        label: "Gestionar roles",
+        to: "/admin/roles",
+        permission: "roles.manage",
+      },
     ],
   },
 ];
