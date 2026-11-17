@@ -7,6 +7,7 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import FormField from "../components/ui/FormField";
 import Alert from "../components/ui/Alert";
+import EquipoSolicitud from "../components/EquipoSolicitud/EquipoSolicitud";
 import "./Pages.css";
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -24,6 +25,7 @@ export default function NewReservation() {
     end_time: "",
     purpose: "",
   });
+  const [equipo, setEquipo] = useState({ equipo: [], otro: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
@@ -36,7 +38,14 @@ export default function NewReservation() {
     setSuccess("");
     setSaving(true);
     try {
-      await api("/reservations", { method: "POST", body: form });
+      await api("/reservations", {
+        method: "POST",
+        body: {
+          ...form,
+          equipo_solicitado: equipo.equipo,
+          equipo_otro: equipo.otro,
+        },
+      });
       setSuccess("Reservación creada");
       setTimeout(() => navigate("/reservas"), 900);
     } catch (err) {
@@ -77,6 +86,8 @@ export default function NewReservation() {
               value={form.purpose}
               onChange={set}
             />
+
+            <EquipoSolicitud onChange={setEquipo} />
 
             <Button type="submit" disabled={saving}>
               {saving ? "Guardando…" : "Reservar"}

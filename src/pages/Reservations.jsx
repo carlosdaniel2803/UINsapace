@@ -169,6 +169,11 @@ export default function Reservations() {
                           {r.purpose ? ` · ${r.purpose}` : ""}
                         </div>
                       )}
+                      {(r.equipo_solicitado?.length > 0 || r.equipo_otro) && (
+                        <div className="list__meta">
+                          Equipo: {[...(r.equipo_solicitado ?? []), r.equipo_otro].filter(Boolean).join(", ")}
+                        </div>
+                      )}
                       {cancelled && r.cancel_reason && (
                         <div className="list__meta">Motivo: {r.cancel_reason}</div>
                       )}

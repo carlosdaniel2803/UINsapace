@@ -10,6 +10,19 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const TZ = "America/Mexico_City";
 
+// Equipo que se puede solicitar junto con la reserva (debe coincidir con EquipoSolicitud.jsx)
+const EQUIPOS = [
+  "Chromebook",
+  "Cable HDMI",
+  "Control de bocina",
+  "Control de cañón",
+  "Control del clima",
+  "Manos libres",
+  "Cable VGA",
+  "Webcam",
+  "Adaptador HDMI/VGA",
+];
+
 // GET /api/reservations?from=YYYY-MM-DD&to=YYYY-MM-DD[&room_id=]
 // Con "reservations.view_all" se ve quién reservó, el motivo y las canceladas.
 // Sin él solo se ven horarios ocupados (y el detalle de las reservas propias).
@@ -29,6 +42,7 @@ router.get("/", requirePermission("calendar.view"), async (req, res, next) => {
               to_char(r.start_time, 'HH24:MI') AS start_time,
               to_char(r.end_time, 'HH24:MI') AS end_time,
               r.status, r.purpose, r.cancel_reason, u.name AS user_name,
+              r.equipo_solicitado, r.equipo_otro,
               (r.user_id = $3) AS mine
        FROM reservations r
        JOIN rooms rm ON rm.id = r.room_id
@@ -59,7 +73,7 @@ router.get("/", requirePermission("calendar.view"), async (req, res, next) => {
   }
 });
 
-// POST /api/reservations  { room_id, date, start_time, end_time, purpose }
+// POST /api/reservations  { room_id, date, start_time, end_time, purpose, equipo_solicitado[], equipo_otro }
 router.post("/", requirePermission("reservations.create"), async (req, res, next) => {
   try {
     const { room_id, purpose } = req.body;
@@ -67,6 +81,14 @@ router.post("/", requirePermission("reservations.create"), async (req, res, next
     const start_time = asString(req.body.start_time);
     const end_time = asString(req.body.end_time);
     const cleanPurpose = asString(purpose).trim().slice(0, 255);
+    const equipo = [
+      ...new Set(
+        (Array.isArray(req.body.equipo_solicitado) ? req.body.equipo_solicitado : []).filter(
+          (e) => EQUIPOS.includes(e),
+        ),
+      ),
+    ];
+    const equipoOtro = asString(req.body.equipo_otro).trim().slice(0, 255);
 
     if (!/^\d+$/.test(String(room_id ?? "")))
       return res.status(400).json({ error: "Selecciona un salón" });
@@ -83,10 +105,10 @@ router.post("/", requirePermission("reservations.create"), async (req, res, next
       return res.status(400).json({ error: "No se puede reservar en el pasado" });
 
     const result = await query(
-      `INSERT INTO reservations (user_id, room_id, date, start_time, end_time, purpose)
-       SELECT $1, id, $3, $4, $5, $6 FROM rooms WHERE id = $2 AND active
+      `INSERT INTO reservations (user_id, room_id, date, start_time, end_time, purpose, equipo_solicitado, equipo_otro)
+       SELECT $1, id, $3, $4, $5, $6, $7, $8 FROM rooms WHERE id = $2 AND active
        RETURNING id`,
-      [req.user.id, room_id, date, start_time, end_time, cleanPurpose || null],
+      [req.user.id, room_id, date, start_time, end_time, cleanPurpose || null, equipo, equipoOtro || null],
     );
     if (result.rowCount === 0)
       return res.status(404).json({ error: "El salón no existe o no está disponible" });
