@@ -20,22 +20,7 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/reportes"
-        element={
-          <ProtectedRoute permission="reports.view_history">
-            <Reports />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/reportes/nuevo"
-        element={
-          <ProtectedRoute permission="reports.create">
-            <NewReport />
-          </ProtectedRoute>
-        }
-      />
+
       <Route
         path="/reservas"
         element={
@@ -52,6 +37,24 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+      <Route
+        path="/reportes"
+        element={
+          <ProtectedRoute permission="reports.view_history">
+            <Reports />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reportes/nuevo"
+        element={
+          <ProtectedRoute permission="reports.create">
+            <NewReport />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/admin/roles"
         element={
