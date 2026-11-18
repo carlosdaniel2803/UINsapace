@@ -49,7 +49,7 @@ router.get("/", requirePermission("calendar.view"), async (req, res, next) => {
        JOIN users u  ON u.id = r.user_id
        WHERE r.date BETWEEN $1 AND $2
          AND ($4::bigint IS NULL OR r.room_id = $4)
-         AND ($5 OR r.status = 'confirmada')
+         AND ($5 OR r.status <> 'cancelada')
        ORDER BY r.date, r.start_time`,
       [from, to, req.user.id, room_id || null, viewAll],
     );
@@ -118,6 +118,29 @@ router.post("/", requirePermission("reservations.create"), async (req, res, next
     // 23P01 = traslape (restricción reservations_no_overlap)
     if (err.code === "23P01")
       return res.status(409).json({ error: "El salón ya está reservado en ese horario" });
+    next(err);
+  }
+});
+
+// POST /api/reservations/:id/confirm  (pendiente -> confirmada)
+router.post("/:id/confirm", async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id))
+      return res.status(400).json({ error: "Id inválido" });
+    const canAny =
+      req.user.permissions.includes("reservations.cancel_any") ||
+      req.user.permissions.includes("reservations.manage");
+    if (!canAny)
+      return res.status(403).json({ error: "No tienes permiso para confirmar reservaciones" });
+
+    const result = await query(
+      "UPDATE reservations SET status = 'confirmada' WHERE id = $1 AND status = 'pendiente' RETURNING id",
+      [req.params.id],
+    );
+    if (result.rowCount === 0)
+      return res.status(409).json({ error: "Solo se pueden confirmar reservaciones pendientes" });
+    res.json({ message: "Reservación confirmada" });
+  } catch (err) {
     next(err);
   }
 });

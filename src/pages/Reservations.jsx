@@ -43,10 +43,10 @@ export default function Reservations() {
   const showDetails = can("reservations.view_all");
   const canCancelAny = can("reservations.cancel_any") || can("reservations.manage");
 
-  // Cuántas reservas confirmadas hay por día
+  // Cuántas reservas activas (pendientes o confirmadas) hay por día
   const countByDay = {};
   items.forEach((r) => {
-    if (r.status === "confirmada") countByDay[r.date] = (countByDay[r.date] || 0) + 1;
+    if (r.status !== "cancelada") countByDay[r.date] = (countByDay[r.date] || 0) + 1;
   });
 
   const offset = (new Date(cursor.y, cursor.m, 1).getDay() + 6) % 7; // semana inicia en lunes
@@ -67,6 +67,19 @@ export default function Reservations() {
     setActionError("");
     try {
       await api(`/reservations/${r.id}/cancel`, { method: "POST", body: { reason } });
+      reload();
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleConfirm = async (r) => {
+    setBusyId(r.id);
+    setActionError("");
+    try {
+      await api(`/reservations/${r.id}/confirm`, { method: "POST" });
       reload();
     } catch (err) {
       setActionError(err.message);
@@ -178,16 +191,28 @@ export default function Reservations() {
                         <div className="list__meta">Motivo: {r.cancel_reason}</div>
                       )}
                     </div>
-                    {canCancel && (
-                      <button
-                        type="button"
-                        className="danger-btn"
-                        disabled={busyId === r.id}
-                        onClick={() => handleCancel(r)}
-                      >
-                        Cancelar
-                      </button>
-                    )}
+                    <div className="list__actions">
+                      {r.status === "pendiente" && r.id && canCancelAny && (
+                        <button
+                          type="button"
+                          className="ok-btn"
+                          disabled={busyId === r.id}
+                          onClick={() => handleConfirm(r)}
+                        >
+                          Confirmar
+                        </button>
+                      )}
+                      {canCancel && (
+                        <button
+                          type="button"
+                          className="danger-btn"
+                          disabled={busyId === r.id}
+                          onClick={() => handleCancel(r)}
+                        >
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
