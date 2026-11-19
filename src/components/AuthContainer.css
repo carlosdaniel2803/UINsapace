@@ -14,13 +14,9 @@
 
 .auth-container__logo {
   display: block;
-  width: 300px;
-  height: 120px;
-  object-fit: cover; /* recorta el margen vacío del PNG */
-  object-position: center;
-  margin: 0 auto 16px;
-  filter: invert(1);
-  mix-blend-mode: screen;
+  width: 190px;
+  height: auto;
+  margin: 0 auto 28px;
 }
 
 @keyframes auth-container-fade-in {

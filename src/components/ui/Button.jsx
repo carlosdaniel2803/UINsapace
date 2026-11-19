@@ -1,6 +1,6 @@
 import "./Button.css";
 
-// variant: "primary" | "outline"     size: "default" | "small"
+// variant: "primary" | "secondary" | "outline"     size: "default" | "small"
 export default function Button({
   variant = "primary",
   size = "default",

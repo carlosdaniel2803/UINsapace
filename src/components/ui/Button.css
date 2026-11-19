@@ -1,32 +1,54 @@
 .ui-button {
   width: 100%;
-  padding: 13px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  padding: 11px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
+.ui-button:focus-visible {
+  outline: 3px solid rgba(15, 107, 58, 0.3);
+  outline-offset: 2px;
+}
+
+/* Principal: verde sólido */
 .ui-button--primary {
   margin-top: 8px;
-  background: var(--gradient-accent);
+  background: var(--color-accent);
   color: var(--color-on-accent);
 }
 
-.ui-button--primary:hover {
-  background: rgba(79, 172, 254, 0.35);
+.ui-button--primary:hover:not(:disabled) {
+  background: var(--color-accent-hover);
 }
 
+/* Secundario: verde suave con borde */
+.ui-button--secondary {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border-color: rgba(15, 107, 58, 0.55);
+}
+
+.ui-button--secondary:hover:not(:disabled) {
+  background: var(--color-accent-soft-hover);
+  border-color: var(--color-accent);
+}
+
+/* Neutro: blanco con borde gris */
 .ui-button--outline {
-  background: transparent;
+  background: #fff;
   color: var(--color-text);
-  border: 1px solid var(--color-border-input);
+  border-color: var(--color-border-input);
 }
 
-.ui-button--outline:hover {
+.ui-button--outline:hover:not(:disabled) {
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
@@ -34,12 +56,8 @@
 .ui-button--small {
   width: auto;
   margin-top: 0;
-  padding: 8px 16px;
+  padding: 8px 18px;
   font-size: 0.875rem;
-}
-
-.ui-button:active {
-  transform: translateY(0);
 }
 
 .ui-button:disabled {

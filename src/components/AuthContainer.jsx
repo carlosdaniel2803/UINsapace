@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Login from "./Login";
 import Register from "./Register";
-import logo from "../assets/uin-icon.png";
+import logo from "../assets/uin-logo-dark.png";
 import "./AuthContainer.css";
 
 export default function AuthContainer() {

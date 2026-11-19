@@ -7,12 +7,13 @@
 .app-layout__main {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 24px;
+  padding: 40px 24px 56px;
 }
 
-/* Páginas anchas (listas, calendario): contenido arriba y con ancho máximo */
-.app-layout__main--wide {
-  align-items: flex-start;
+@media (max-width: 520px) {
+  .app-layout__main {
+    padding: 24px 16px 40px;
+  }
 }

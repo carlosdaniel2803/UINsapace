@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import Button from "../ui/Button";
-import logo from "../../assets/uin-logo-white.png";
+import logo from "../../assets/uin-logo-dark.png";
 import "./Header.css";
 
 export default function Header() {
@@ -19,12 +19,12 @@ export default function Header() {
         <img className="app-header__logo" src={logo} alt="UIN Space" />
       </Link>
 
-      <h5 className="app-header__by">
-        Ingeniería y Desarrollo de Software - Carlos Daniel Garcia Martinez
-      </h5>
+      <p className="app-header__by">
+        Ingeniería y Desarrollo de Software • Carlos Daniel García Martínez
+      </p>
 
       <div className="app-header__user">
-        <span className="app-header__name">{user?.name}</span>
+        {user?.name && <span className="app-header__name">{user.name}</span>}
         <Button variant="outline" size="small" onClick={handleLogout}>
           Cerrar sesión
         </Button>
