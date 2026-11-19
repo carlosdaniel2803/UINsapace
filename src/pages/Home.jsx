@@ -3,7 +3,12 @@ import { useAuth } from "../context/AuthContext";
 import AppLayout from "../components/layout/AppLayout";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
-import { CalendarIcon, ReportIcon, GearIcon, LeafArt } from "../components/ui/Icons";
+import {
+  CalendarIcon,
+  ReportIcon,
+  GearIcon,
+  LeafArt,
+} from "../components/ui/Icons";
 import "./Home.css";
 
 // Cada acción solo se muestra si el usuario tiene el permiso.
@@ -101,7 +106,7 @@ export default function Home() {
               <h1 className="home__hero-title">
                 ¡Bienvenido{firstName ? `, ${firstName}` : ""}!
               </h1>
-              <p className="home__hero-sub">Dashboard</p>
+              <p className="home__hero-sub">UNIVERSIDAD INSURGENTES</p>
               <p className="home__hero-desc">
                 Gestiona tus reservas y reportes.
               </p>
@@ -109,10 +114,14 @@ export default function Home() {
             <LeafArt className="home__hero-art" />
           </section>
 
-          {main.length > 0 && <div className="home__row">{main.map(renderCard)}</div>}
+          {main.length > 0 && (
+            <div className="home__row">{main.map(renderCard)}</div>
+          )}
         </div>
 
-        {side.length > 0 && <aside className="home__side">{side.map(renderCard)}</aside>}
+        {side.length > 0 && (
+          <aside className="home__side">{side.map(renderCard)}</aside>
+        )}
       </div>
     </AppLayout>
   );
