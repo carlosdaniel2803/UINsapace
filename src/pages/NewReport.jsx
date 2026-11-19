@@ -9,18 +9,11 @@ import FormField from "../components/ui/FormField";
 import Alert from "../components/ui/Alert";
 import "./Pages.css";
 
-const PRIORITY_OPTIONS = [
-  { value: "baja", label: "Baja" },
-  { value: "media", label: "Media" },
-  { value: "alta", label: "Alta" },
-  { value: "urgente", label: "Urgente" },
-];
-
 export default function NewReport() {
   const navigate = useNavigate();
   const rooms = useApi("/rooms");
 
-  const [form, setForm] = useState({ room_id: "", priority: "media", description: "" });
+  const [form, setForm] = useState({ room_id: "", description: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
@@ -35,7 +28,7 @@ export default function NewReport() {
     try {
       await api("/reports", { method: "POST", body: form });
       setSuccess("Reporte enviado");
-      setForm({ room_id: "", priority: "media", description: "" });
+      setForm({ room_id: "", description: "" });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -59,15 +52,10 @@ export default function NewReport() {
               value={form.room_id}
               onChange={set}
               required
-              options={(rooms.data?.rooms ?? []).map((r) => ({ value: r.id, label: r.name }))}
-            />
-            <FormField
-              as="select"
-              label="Urgencia"
-              name="priority"
-              value={form.priority}
-              onChange={set}
-              options={PRIORITY_OPTIONS}
+              options={(rooms.data?.rooms ?? []).map((r) => ({
+                value: r.id,
+                label: r.name,
+              }))}
             />
             <FormField
               as="textarea"
